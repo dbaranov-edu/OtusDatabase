@@ -1,0 +1,107 @@
+﻿-- *****************************************************
+--  Внимание! Необходимо создать  (напр. otus_dbaranov)
+-- *****************************************************
+DROP DATABASE IF EXISTS otus_dbaranov;
+CREATE DATABASE otus_dbaranov;
+
+
+
+-- ******************************************
+--  Создание таблиц: users, offers, comments
+-- ******************************************
+
+-- Создание таблицы с пользователями: users
+CREATE SEQUENCE IF NOT EXISTS public.users_seq AS bigint;
+CREATE TABLE IF NOT EXISTS public.users
+(
+    id bigint NOT NULL DEFAULT nextval('users_seq'::regclass),
+    firstname varchar(255) NOT NULL,
+    lastname varchar(255) NOT NULL,
+    email varchar(255) NOT NULL,
+    birthdate date,
+    created_at timestamp with time zone NOT NULL DEFAULT now(),
+    updated_at timestamp with time zone,
+    CONSTRAINT users_pkey PRIMARY KEY (id),
+    CONSTRAINT users_email_unique UNIQUE (email)
+)
+TABLESPACE pg_default;
+ALTER SEQUENCE public.users_seq OWNED BY public.users.id;
+
+-- Создание таблицы с предложениями: offers
+CREATE SEQUENCE IF NOT EXISTS public.offers_seq AS bigint;
+CREATE TABLE IF NOT EXISTS public.offers
+(
+    id bigint NOT NULL DEFAULT nextval('offers_seq'::regclass),
+    user_id bigint NOT NULL,
+    hidden boolean NOT NULL DEFAULT false,
+    price money NOT NULL,
+    title varchar(255) NOT NULL,
+    description text NOT NULL,
+    created_at timestamp with time zone NOT NULL DEFAULT now(),
+    updated_at timestamp with time zone,
+    CONSTRAINT offers_pkey PRIMARY KEY (id),
+    CONSTRAINT offers_user_id_fkey FOREIGN KEY (user_id)
+        REFERENCES public.users (id) MATCH SIMPLE
+        ON UPDATE RESTRICT
+        ON DELETE RESTRICT
+        NOT VALID,
+	CONSTRAINT offers_price_valid CHECK (price > 0.0::money)
+)
+TABLESPACE pg_default;
+ALTER SEQUENCE public.offers_seq OWNED BY public.offers.id;
+
+-- Создание таблицы с комментариями к товару: comments
+CREATE SEQUENCE IF NOT EXISTS public.comments_seq AS bigint;
+CREATE TABLE IF NOT EXISTS public.comments
+(
+    id bigint NOT NULL DEFAULT nextval('comments_seq'::regclass),
+    offer_id bigint NOT NULL,
+    user_id bigint,
+    hidden boolean NOT NULL DEFAULT false,
+    content text NOT NULL,
+    created_at timestamp with time zone NOT NULL DEFAULT now(),
+    updated_at timestamp with time zone,
+    CONSTRAINT comments_pkey PRIMARY KEY (id),
+    CONSTRAINT comments_user_id_fkey FOREIGN KEY (user_id)
+        REFERENCES public.users (id) MATCH SIMPLE
+        ON UPDATE RESTRICT
+        ON DELETE RESTRICT
+        NOT VALID,
+    CONSTRAINT comments_offer_id_fkey FOREIGN KEY (offer_id)
+        REFERENCES public.offers (id) MATCH SIMPLE
+        ON UPDATE CASCADE
+        ON DELETE CASCADE
+        NOT VALID
+)
+TABLESPACE pg_default;
+ALTER SEQUENCE public.comments_seq OWNED BY public.comments.id;
+
+
+
+-- ***************************
+--  Заполнение таблиц данными
+-- ***************************
+
+-- Заполнение таблицы пользователями
+INSERT INTO users(firstname, lastname, email, birthdate) VALUES
+    ('Александр', 'Пушкин', 'pushkin@gmail.com', '01.01.1980'),
+    ('Антон', 'Чехов', 'anton.che@gmail.com', '05.10.1985'),
+    ('Лев', 'Толстой', 'tolstoy1@gmail.com', NULL),
+    ('Федор', 'Достаевский', 'fedos1@gmail.com', NULL),
+    ('Николай', 'Гоголь', 'nik777@gmail.com', '02.03.1993');
+
+-- Заполнение таблицы предложениями
+INSERT INTO offers(user_id, price, title, description) VALUES
+    (3, '150.0', 'Перьевая ручка Pilot Capless', 'Перьевая ручка Pilot Capless с пером из белого золота 14К/585.'),
+    (3, '360.0', 'Перьевые ручки Sailor 1911 Large и Pro Gear', 'Перо золотое 21K, 875 проба, толщина линии M.'),
+    (2, '50.0', 'Перьевая ручка parker 5th slim', 'Перьевая ручка parker 5th slim'),
+    (2, '30.0', 'The Crew Wild Run Edition на PS4/PS5', 'Лицензия - The Crew Wild Run Edition.'),
+    (1, '500.0', 'Lenovo X260 i5-6300U/16Gb RAM/240Gb SSD', 'Б/у ноутбук Lenovo X260 i5-6300U/16Gb RAM/240Gb SSD в хорошем состоянии.');
+
+-- Заполнение таблицы комментариями
+INSERT INTO comments(offer_id, user_id, content) VALUES
+    (1, 1, 'Очень удобная перьевая ручка!'),
+    (1, 2, 'Подверждаю, очень удобная ручка. Пользуюсь уже неделю и радуюсь.'),
+    (1, 3, 'Спасибо за отзывы!'),
+    (5, 4, 'Почему продаете ноутбук?'),
+    (5, 1, 'Мне на день рождения подарили Mac и в ноутбуке нет необходимости.');
